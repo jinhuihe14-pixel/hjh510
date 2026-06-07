@@ -8,9 +8,10 @@ interface CabinetProps {
   isSelected: boolean;
   onClick: () => void;
   onPointerDown?: (event: any) => void;
+  onResizeStart?: (handle: 'left' | 'right' | 'top', event: any) => void;
 }
 
-export function Cabinet({ component, isSelected, onClick, onPointerDown }: CabinetProps) {
+export function Cabinet({ component, isSelected, onClick, onPointerDown, onResizeStart }: CabinetProps) {
   const template = allComponents.find((c) => c.id === component.componentId);
   const material = getMaterialById(component.materialId);
 
@@ -168,6 +169,71 @@ export function Cabinet({ component, isSelected, onClick, onPointerDown }: Cabin
           <boxGeometry args={[width + 0.02, height + 0.02, depth + 0.02]} />
           <meshBasicMaterial color="#FFB74D" transparent opacity={0.3} />
         </mesh>
+      )}
+
+      {/* 缩放手柄 */}
+      {isSelected && onResizeStart && (
+        <>
+          {/* 右侧手柄 - 调整宽度 */}
+          <mesh
+            position={[width / 2 + 0.02, 0, 0]}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onResizeStart('right', e);
+            }}
+            onPointerOver={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = 'ew-resize';
+            }}
+            onPointerOut={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = 'default';
+            }}
+          >
+            <boxGeometry args={[0.04, height * 0.3, depth * 0.6]} />
+            <meshStandardMaterial color="#FFB74D" emissive="#FFB74D" emissiveIntensity={0.5} />
+          </mesh>
+
+          {/* 左侧手柄 - 调整宽度 */}
+          <mesh
+            position={[-width / 2 - 0.02, 0, 0]}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onResizeStart('left', e);
+            }}
+            onPointerOver={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = 'ew-resize';
+            }}
+            onPointerOut={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = 'default';
+            }}
+          >
+            <boxGeometry args={[0.04, height * 0.3, depth * 0.6]} />
+            <meshStandardMaterial color="#FFB74D" emissive="#FFB74D" emissiveIntensity={0.5} />
+          </mesh>
+
+          {/* 顶部手柄 - 调整高度 */}
+          <mesh
+            position={[0, height / 2 + 0.02, 0]}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onResizeStart('top', e);
+            }}
+            onPointerOver={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = 'ns-resize';
+            }}
+            onPointerOut={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = 'default';
+            }}
+          >
+            <boxGeometry args={[width * 0.3, 0.04, depth * 0.6]} />
+            <meshStandardMaterial color="#FFB74D" emissive="#FFB74D" emissiveIntensity={0.5} />
+          </mesh>
+        </>
       )}
     </group>
   );

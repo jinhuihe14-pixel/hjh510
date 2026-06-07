@@ -57,6 +57,8 @@ const createInitialState = () => {
     draggingComponent: null,
     hoverPosition: null,
     draggingPlacedId: null,
+    resizingId: null,
+    resizeHandle: null as 'left' | 'right' | 'top' | null,
     lightingMode: 'day' as const,
     schemes: [],
     compareMode: false,
@@ -113,7 +115,10 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  updateComponent: (id: string, updates: Partial<PlacedComponent>) => {
+  updateComponent: (id: string, updates: Partial<PlacedComponent>, saveHistory = true) => {
+    if (saveHistory) {
+      get().saveState();
+    }
     set((state) => {
       const newComponents = state.components.map((c) =>
         c.id === id ? { ...c, ...updates } : c
@@ -137,6 +142,14 @@ export const useStore = create<AppState>((set, get) => ({
 
   setDraggingPlacedId: (id: string | null) => {
     set({ draggingPlacedId: id });
+  },
+
+  setResizingId: (id: string | null) => {
+    set({ resizingId: id });
+  },
+
+  setResizeHandle: (handle: 'left' | 'right' | 'top' | null) => {
+    set({ resizeHandle: handle });
   },
 
   setLightingMode: (mode: LightingMode) => {
@@ -167,12 +180,15 @@ export const useStore = create<AppState>((set, get) => ({
   loadScheme: (id: string) => {
     const scheme = get().schemes.find((s) => s.id === id);
     if (scheme) {
+      const newComponents = scheme.components.map((c) => ({ ...c }));
+      const newQuote = calculateQuote(newComponents);
       set({
         room: { ...scheme.room },
-        components: scheme.components.map((c) => ({ ...c })),
+        components: newComponents,
         lightingMode: scheme.lightingMode,
         selectedComponentId: null,
         compareMode: false,
+        quote: newQuote,
       });
     }
   },

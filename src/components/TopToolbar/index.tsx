@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Home,
   Save,
@@ -37,6 +38,7 @@ export function TopToolbar({ viewMode, onViewModeChange }: TopToolbarProps) {
   const [showSchemeMenu, setShowSchemeMenu] = useState(false);
   const [schemeName, setSchemeName] = useState('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleRoomChange = (roomId: string) => {
     const newRoom = presetRooms.find((r) => r.id === roomId);
@@ -53,6 +55,15 @@ export function TopToolbar({ viewMode, onViewModeChange }: TopToolbarProps) {
       setShowSaveDialog(false);
     }
   };
+
+  useEffect(() => {
+    if (showSaveDialog && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 50);
+    }
+  }, [showSaveDialog]);
 
   const handleExport = () => {
     const canvas = document.querySelector('canvas');
@@ -72,6 +83,7 @@ export function TopToolbar({ viewMode, onViewModeChange }: TopToolbarProps) {
   ];
 
   return (
+    <>
     <div className="h-16 bg-gradient-to-r from-stone-800 to-stone-700 text-white flex items-center justify-between px-6 shadow-lg">
       {/* 左侧Logo */}
       <div className="flex items-center gap-3">
@@ -245,10 +257,24 @@ export function TopToolbar({ viewMode, onViewModeChange }: TopToolbarProps) {
         </button>
       </div>
 
-      {/* 保存方案对话框 */}
-      {showSaveDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-96 shadow-2xl">
+    </div>
+      {showSaveDialog && createPortal(
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowSaveDialog(false);
+            }
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div
+            className="bg-white rounded-xl p-6 w-96 shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800">保存方案</h3>
               <button
@@ -259,13 +285,24 @@ export function TopToolbar({ viewMode, onViewModeChange }: TopToolbarProps) {
               </button>
             </div>
             <input
+              ref={inputRef}
               type="text"
               value={schemeName}
               onChange={(e) => setSchemeName(e.target.value)}
               placeholder="请输入方案名称"
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 mb-4"
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveScheme()}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') {
+                  handleSaveScheme();
+                }
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.currentTarget.focus();
+              }}
             />
             <div className="flex gap-3">
               <button
@@ -283,8 +320,9 @@ export function TopToolbar({ viewMode, onViewModeChange }: TopToolbarProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }

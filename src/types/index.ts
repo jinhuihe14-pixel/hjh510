@@ -111,6 +111,8 @@ export interface AppState {
   draggingComponent: CabinetComponent | null;
   hoverPosition: { x: number; z: number } | null;
   draggingPlacedId: string | null;
+  resizingId: string | null;
+  resizeHandle: 'left' | 'right' | 'top' | null;
   lightingMode: LightingMode;
   schemes: DesignScheme[];
   compareMode: boolean;
@@ -123,11 +125,13 @@ export interface AppState {
   setRoom: (room: RoomConfig) => void;
   addComponent: (component: CabinetComponent, position: { x: number; y: number; z: number }) => void;
   removeComponent: (id: string) => void;
-  updateComponent: (id: string, updates: Partial<PlacedComponent>) => void;
+  updateComponent: (id: string, updates: Partial<PlacedComponent>, saveHistory?: boolean) => void;
   selectComponent: (id: string | null) => void;
   setDraggingComponent: (component: CabinetComponent | null) => void;
   setHoverPosition: (position: { x: number; z: number } | null) => void;
   setDraggingPlacedId: (id: string | null) => void;
+  setResizingId: (id: string | null) => void;
+  setResizeHandle: (handle: 'left' | 'right' | 'top' | null) => void;
   setLightingMode: (mode: LightingMode) => void;
   saveScheme: (name: string) => string;
   deleteScheme: (id: string) => void;

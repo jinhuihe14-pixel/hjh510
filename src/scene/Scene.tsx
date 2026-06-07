@@ -33,6 +33,10 @@ function SceneContent({ viewMode }: SceneContentProps) {
   const setDraggingPlacedId = useStore((state) => state.setDraggingPlacedId);
   const updateComponent = useStore((state) => state.updateComponent);
   const saveState = useStore((state) => state.saveState);
+  const resizingId = useStore((state) => state.resizingId);
+  const setResizingId = useStore((state) => state.setResizingId);
+  const resizeHandle = useStore((state) => state.resizeHandle);
+  const setResizeHandle = useStore((state) => state.setResizeHandle);
 
   const raycasterRef = useRef(new THREE.Raycaster());
   const mouseRef = useRef(new THREE.Vector2());
@@ -42,6 +46,8 @@ function SceneContent({ viewMode }: SceneContentProps) {
   const dragStartPosRef = useRef({ x: 0, z: 0 });
   const hasMovedRef = useRef(false);
   const dragStateSavedRef = useRef(false);
+  const resizeStartRef = useRef({ x: 0, y: 0, scaleX: 1, scaleY: 1, posX: 0 });
+  const resizeStateSavedRef = useRef(false);
 
   const width = room.width / 1000;
   const depth = room.depth / 1000;
@@ -289,6 +295,33 @@ function SceneContent({ viewMode }: SceneContentProps) {
     }
   }, [components, updateMousePosition, getFloorIntersection, selectComponent, setDraggingPlacedId, gl]);
 
+  const handleResizeStart = useCallback((compId: string, handle: 'left' | 'right' | 'top', event: any) => {
+    const comp = components.find((c) => c.id === compId);
+    if (!comp) return;
+
+    event.stopPropagation();
+    selectComponent(compId);
+
+    updateMousePosition(event.clientX, event.clientY);
+
+    resizeStartRef.current = {
+      x: mouseRef.current.x,
+      y: mouseRef.current.y,
+      scaleX: comp.scale.x,
+      scaleY: comp.scale.y,
+      posX: comp.position.x,
+    };
+    resizeStateSavedRef.current = false;
+    setResizingId(compId);
+    setResizeHandle(handle);
+
+    if (handle === 'left' || handle === 'right') {
+      gl.domElement.style.cursor = 'ew-resize';
+    } else {
+      gl.domElement.style.cursor = 'ns-resize';
+    }
+  }, [components, updateMousePosition, selectComponent, setResizingId, setResizeHandle, gl]);
+
   const handleCanvasDrop = useCallback((event: DragEvent) => {
     event.preventDefault();
     if (hoverPosition && draggingComponent) {
@@ -320,9 +353,54 @@ function SceneContent({ viewMode }: SceneContentProps) {
   }, [updateMousePosition, getFloorIntersection, draggingComponent, width, depth, setHoverPosition]);
 
   const handleGlobalPointerMove = useCallback((event: PointerEvent) => {
-    if (!draggingPlacedId) return;
+    if (!draggingPlacedId && !resizingId) return;
 
     updateMousePosition(event.clientX, event.clientY);
+
+    if (resizingId && resizeHandle) {
+      const comp = components.find((c) => c.id === resizingId);
+      if (!comp) return;
+
+      const template = allComponents.find((c) => c.id === comp.componentId);
+      if (!template) return;
+
+      const dx = mouseRef.current.x - resizeStartRef.current.x;
+      const dy = mouseRef.current.y - resizeStartRef.current.y;
+
+      if (!resizeStateSavedRef.current && (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001)) {
+        saveState();
+        resizeStateSavedRef.current = true;
+      }
+
+      const minScale = 0.5;
+      const maxScale = 2.5;
+
+      if (resizeHandle === 'right') {
+        const scaleDelta = dx * 2;
+        const newScaleX = Math.max(minScale, Math.min(maxScale, resizeStartRef.current.scaleX + scaleDelta));
+        updateComponent(resizingId, {
+          scale: { ...comp.scale, x: newScaleX },
+        }, false);
+      } else if (resizeHandle === 'left') {
+        const scaleDelta = -dx * 2;
+        const newScaleX = Math.max(minScale, Math.min(maxScale, resizeStartRef.current.scaleX + scaleDelta));
+        const oldWidth = (template.width * resizeStartRef.current.scaleX) / 1000;
+        const newWidth = (template.width * newScaleX) / 1000;
+        const posDelta = (oldWidth - newWidth) / 2;
+        updateComponent(resizingId, {
+          scale: { ...comp.scale, x: newScaleX },
+          position: { ...comp.position, x: resizeStartRef.current.posX + posDelta },
+        }, false);
+      } else if (resizeHandle === 'top') {
+        const scaleDelta = dy * 2;
+        const newScaleY = Math.max(minScale, Math.min(maxScale, resizeStartRef.current.scaleY + scaleDelta));
+        updateComponent(resizingId, {
+          scale: { ...comp.scale, y: newScaleY },
+        }, false);
+      }
+      return;
+    }
+
     const point = getFloorIntersection();
 
     if (point) {
@@ -346,7 +424,7 @@ function SceneContent({ viewMode }: SceneContentProps) {
         targetZ,
         size.width,
         size.depth,
-        draggingPlacedId
+        draggingPlacedId!
       );
       targetX = cabinetSnapped.x;
       targetZ = cabinetSnapped.z;
@@ -365,12 +443,14 @@ function SceneContent({ viewMode }: SceneContentProps) {
         hasMovedRef.current = true;
       }
 
-      updateComponent(draggingPlacedId, {
+      updateComponent(draggingPlacedId!, {
         position: { x: targetX, y: 0, z: targetZ },
-      });
+      }, false);
     }
   }, [
     draggingPlacedId,
+    resizingId,
+    resizeHandle,
     components,
     updateMousePosition,
     getFloorIntersection,
@@ -384,11 +464,17 @@ function SceneContent({ viewMode }: SceneContentProps) {
   ]);
 
   const handleGlobalPointerUp = useCallback(() => {
+    if (resizingId) {
+      setResizingId(null);
+      setResizeHandle(null);
+      gl.domElement.style.cursor = 'default';
+      document.body.style.cursor = 'default';
+    }
     if (draggingPlacedId) {
       setDraggingPlacedId(null);
       gl.domElement.style.cursor = 'default';
     }
-  }, [draggingPlacedId, setDraggingPlacedId, gl]);
+  }, [draggingPlacedId, resizingId, setDraggingPlacedId, setResizingId, setResizeHandle, gl]);
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -413,9 +499,9 @@ function SceneContent({ viewMode }: SceneContentProps) {
       <PerspectiveCamera makeDefault fov={50} position={[5, 3.5, 4.5]} />
       <OrbitControls
         ref={controlsRef}
-        enablePan={!draggingPlacedId}
+        enablePan={!draggingPlacedId && !resizingId}
         enableZoom={true}
-        enableRotate={!draggingPlacedId}
+        enableRotate={!draggingPlacedId && !resizingId}
       />
 
       <Lights mode={lightingMode} />
@@ -461,6 +547,7 @@ function SceneContent({ viewMode }: SceneContentProps) {
           isSelected={comp.id === selectedComponentId}
           onClick={() => selectComponent(comp.id)}
           onPointerDown={(e) => handleCabinetPointerDown(comp.id, e)}
+          onResizeStart={(handle, e) => handleResizeStart(comp.id, handle, e)}
         />
       ))}
 
