@@ -110,6 +110,7 @@ export interface AppState {
   selectedComponentId: string | null;
   draggingComponent: CabinetComponent | null;
   hoverPosition: { x: number; z: number } | null;
+  draggingPlacedId: string | null;
   lightingMode: LightingMode;
   schemes: DesignScheme[];
   compareMode: boolean;
@@ -126,6 +127,7 @@ export interface AppState {
   selectComponent: (id: string | null) => void;
   setDraggingComponent: (component: CabinetComponent | null) => void;
   setHoverPosition: (position: { x: number; z: number } | null) => void;
+  setDraggingPlacedId: (id: string | null) => void;
   setLightingMode: (mode: LightingMode) => void;
   saveScheme: (name: string) => string;
   deleteScheme: (id: string) => void;

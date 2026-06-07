@@ -7,9 +7,10 @@ interface CabinetProps {
   component: PlacedComponent;
   isSelected: boolean;
   onClick: () => void;
+  onPointerDown?: (event: any) => void;
 }
 
-export function Cabinet({ component, isSelected, onClick }: CabinetProps) {
+export function Cabinet({ component, isSelected, onClick, onPointerDown }: CabinetProps) {
   const template = allComponents.find((c) => c.id === component.componentId);
   const material = getMaterialById(component.materialId);
 
@@ -43,6 +44,10 @@ export function Cabinet({ component, isSelected, onClick }: CabinetProps) {
           e.stopPropagation();
           onClick();
         }}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          onPointerDown?.(e);
+        }}
       >
         <mesh position={[-width / 4, 0, -depth / 4]} castShadow receiveShadow>
           <boxGeometry args={[width / 2, height, depth / 2]} />
@@ -73,6 +78,10 @@ export function Cabinet({ component, isSelected, onClick }: CabinetProps) {
       onClick={(e) => {
         e.stopPropagation();
         onClick();
+      }}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onPointerDown?.(e);
       }}
     >
       {/* 左侧板 */}

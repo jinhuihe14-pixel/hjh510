@@ -56,6 +56,7 @@ const createInitialState = () => {
     selectedComponentId: null,
     draggingComponent: null,
     hoverPosition: null,
+    draggingPlacedId: null,
     lightingMode: 'day' as const,
     schemes: [],
     compareMode: false,
@@ -132,6 +133,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   setHoverPosition: (position: { x: number; z: number } | null) => {
     set({ hoverPosition: position });
+  },
+
+  setDraggingPlacedId: (id: string | null) => {
+    set({ draggingPlacedId: id });
   },
 
   setLightingMode: (mode: LightingMode) => {
